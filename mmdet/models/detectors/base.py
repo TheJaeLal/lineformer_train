@@ -169,6 +169,12 @@ class BaseDetector(BaseModule, metaclass=ABCMeta):
             return self.onnx_export(img[0], img_metas[0])
 
         if return_loss:
+            if isinstance(img, list):
+                img = img[0]; img_metas = img_metas[0]
+                for kwarg in kwargs.keys():
+                    if (isinstance(kwargs[kwarg], list) and kwarg.startswith("gt_")):
+                        # Unpack the list
+                        kwargs[kwarg] = kwargs[kwarg][0]
             return self.forward_train(img, img_metas, **kwargs)
         else:
             return self.forward_test(img, img_metas, **kwargs)

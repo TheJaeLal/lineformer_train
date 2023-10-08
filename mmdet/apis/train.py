@@ -15,6 +15,7 @@ from mmdet.datasets import (build_dataloader, build_dataset,
 from mmdet.utils import (build_ddp, build_dp, compat_cfg,
                          find_latest_checkpoint, get_root_logger)
 
+# import ipdb
 
 def init_random_seed(seed=None, device='cuda'):
     """Initialize random seed.
@@ -130,7 +131,10 @@ def train_detector(model,
 
     runner_type = 'EpochBasedRunner' if 'runner' not in cfg else cfg.runner[
         'type']
-
+    # import pickle
+    # with open('config.pkl', 'wb') as f:
+    #     pickle.dump(cfg, f)
+    # exit(0)
     train_dataloader_default_args = dict(
         samples_per_gpu=2,
         workers_per_gpu=2,
@@ -146,6 +150,7 @@ def train_detector(model,
         **cfg.data.get('train_dataloader', {})
     }
 
+    # ipdb.set_trace()
     data_loaders = [build_dataloader(ds, **train_loader_cfg) for ds in dataset]
 
     # put model on gpus
@@ -243,4 +248,6 @@ def train_detector(model,
         runner.resume(cfg.resume_from)
     elif cfg.load_from:
         runner.load_checkpoint(cfg.load_from)
+
+    # ipdb.set_trace()
     runner.run(data_loaders, cfg.workflow)

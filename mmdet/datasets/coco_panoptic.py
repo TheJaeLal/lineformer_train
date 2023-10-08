@@ -8,10 +8,14 @@ import numpy as np
 from mmcv.utils import print_log
 from terminaltables import AsciiTable
 
-from mmdet.core import INSTANCE_OFFSET
+from mmdet.core import INSTANCE_OFFSET, encode_mask_results
 from .api_wrappers import COCO, pq_compute_multi_core
 from .builder import DATASETS
 from .coco import CocoDataset
+
+# import ipdb
+# import pickle
+# import time
 
 try:
     import panopticapi
@@ -261,6 +265,8 @@ class CocoPanopticDataset(CocoDataset):
                  pipeline,
                  ins_ann_file=None,
                  classes=None,
+                 thing_classes=None,
+                 stuff_classes=None,
                  data_root=None,
                  img_prefix='',
                  seg_prefix=None,
@@ -279,6 +285,8 @@ class CocoPanopticDataset(CocoDataset):
             test_mode=test_mode,
             filter_empty_gt=filter_empty_gt,
             file_client_args=file_client_args)
+        self.THING_CLASSES = self.THING_CLASSES if thing_classes is None else thing_classes
+        self.STUFF_CLASSES = self.STUFF_CLASSES if stuff_classes is None else stuff_classes
         self.ins_ann_file = ins_ann_file
 
     def load_annotations(self, ann_file):
@@ -336,10 +344,10 @@ class CocoPanopticDataset(CocoDataset):
         gt_mask_infos = []
 
         for i, ann in enumerate(ann_info):
-            x1, y1, w, h = ann['bbox']
-            if ann['area'] <= 0 or w < 1 or h < 1:
-                continue
-            bbox = [x1, y1, x1 + w, y1 + h]
+            # x1, y1, w, h = ann['bbox']
+            # if ann['area'] <= 0 or w < 1 or h < 1:
+            #     continue
+            bbox = [0, 0, 0, 0]
 
             category_id = ann['category_id']
             contiguous_cat_id = self.cat2label[category_id]
@@ -601,6 +609,17 @@ class CocoPanopticDataset(CocoDataset):
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
 
+        
+        # ipdb.set_trace()
+        # Hack to show instance segmentation results. (Why do we need this???)
+        if 'segm' in metrics and isinstance(results[0], tuple):
+            new_results = []
+            for j in range(len(results)):
+                bbox_results, mask_results = results[j]
+                # print('++++++++++++++++++++++++++++++++++++++++++',j,type(mask_results))
+                new_results.append({'ins_results': (bbox_results, encode_mask_results(mask_results))})
+            results = new_results
+
         result_files, tmp_dir = self.format_results(results, jsonfile_prefix)
         eval_results = {}
 
@@ -612,6 +631,9 @@ class CocoPanopticDataset(CocoDataset):
 
             eval_results.update(eval_pan_results)
             metrics.remove('PQ')
+
+        # with open(f'checking_ins_res_{time.time()}.pkl', 'wb') as f:
+        #     pickle.dump(results, f)
 
         if (('bbox' in metrics) or ('segm' in metrics)
                 or ('proposal' in metrics)):
@@ -627,6 +649,25 @@ class CocoPanopticDataset(CocoDataset):
             panoptic_cat_ids = self.cat_ids
             self.cat_ids = coco_gt.get_cat_ids(cat_names=self.THING_CLASSES)
 
+            # HACK TO VERIFY EVALUTAION
+            # print("******", result_files)
+            # import json
+            # import pandas as pd
+            # with open(self.ins_ann_file, 'r') as f:
+            #     gt_ann = json.load(f)['annotations']
+            # with open(result_files['segm'], 'r') as f:
+            #     pred_ann = json.load(f)
+
+            # df = pd.DataFrame(gt_ann)
+            # df.drop(columns=['id'], inplace=True)
+            # df['score'] = 0.85
+            # gt_cleaned = df.to_dict(orient='records')
+
+            # with open(result_files['segm'], 'w') as f:
+            #     json.dump(gt_cleaned, f)
+            
+
+            # ipdb.set_trace()
             eval_ins_results = self.evaluate_det_segm(results, result_files,
                                                       coco_gt, metrics, logger,
                                                       classwise, **kwargs)

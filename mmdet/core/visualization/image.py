@@ -163,7 +163,7 @@ def draw_labels(ax,
     return ax
 
 
-def draw_masks(ax, img, masks, color=None, with_edge=True, alpha=0.8):
+def draw_masks(ax, img, masks, color=None, with_edge=False, alpha=0.8):
     """Draw masks on the image and their edges on the axes.
 
     Args:
@@ -301,7 +301,7 @@ def imshow_det_bboxes(img,
         num_bboxes = bboxes.shape[0]
         bbox_palette = palette_val(get_palette(bbox_color, max_label + 1))
         colors = [bbox_palette[label] for label in labels[:num_bboxes]]
-        draw_bboxes(ax, bboxes, colors, alpha=0.8, thickness=thickness)
+        # draw_bboxes(ax, bboxes, colors, alpha=0.8, thickness=thickness)
 
         horizontal_alignment = 'left'
         positions = bboxes[:, :2].astype(np.int32) + thickness
@@ -323,7 +323,7 @@ def imshow_det_bboxes(img,
         mask_palette = get_palette(mask_color, max_label + 1)
         colors = [mask_palette[label] for label in labels]
         colors = np.array(colors, dtype=np.uint8)
-        draw_masks(ax, img, segms, colors, with_edge=True)
+        draw_masks(ax, img, segms, colors, with_edge=False, alpha=0.5)
 
         if num_bboxes < segms.shape[0]:
             segms = segms[num_bboxes:]
@@ -348,6 +348,7 @@ def imshow_det_bboxes(img,
                 scales=scales,
                 horizontal_alignment=horizontal_alignment)
 
+    plt.figure(figsize=(10, 10))
     plt.imshow(img)
 
     stream, _ = canvas.print_to_buffer()

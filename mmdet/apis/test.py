@@ -12,7 +12,7 @@ from mmcv.image import tensor2imgs
 from mmcv.runner import get_dist_info
 
 from mmdet.core import encode_mask_results
-
+# import ipdb
 
 def single_gpu_test(model,
                     data_loader,
@@ -26,6 +26,7 @@ def single_gpu_test(model,
     prog_bar = mmcv.ProgressBar(len(dataset))
     for i, data in enumerate(data_loader):
         with torch.no_grad():
+            # ipdb.set_trace()
             result = model(return_loss=False, rescale=True, **data)
 
         batch_size = len(result)
@@ -60,17 +61,18 @@ def single_gpu_test(model,
                     out_file=out_file,
                     score_thr=show_score_thr)
 
-        # encode mask results
-        if isinstance(result[0], tuple):
-            result = [(bbox_results, encode_mask_results(mask_results))
-                      for bbox_results, mask_results in result]
-        # This logic is only used in panoptic segmentation test.
-        elif isinstance(result[0], dict) and 'ins_results' in result[0]:
-            for j in range(len(result)):
-                bbox_results, mask_results = result[j]['ins_results']
-                result[j]['ins_results'] = (bbox_results,
-                                            encode_mask_results(mask_results))
+            # encode mask results
+            if isinstance(result[0], tuple):
+                result = [(bbox_results, encode_mask_results(mask_results))
+                        for bbox_results, mask_results in result]
+            # This logic is only used in panoptic segmentation test.
+            elif isinstance(result[0], dict) and 'ins_results' in result[0]:
+                for j in range(len(result)):
+                    bbox_results, mask_results = result[j]['ins_results']
+                    result[j]['ins_results'] = (bbox_results,
+                                                encode_mask_results(mask_results))
 
+        # ipdb.set_trace()
         results.extend(result)
 
         for _ in range(batch_size):
